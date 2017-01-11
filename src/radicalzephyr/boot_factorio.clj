@@ -1,8 +1,10 @@
 (ns radicalzephyr.boot-factorio
   {:boot/export-tasks true}
-  (:require [boot.core :as core]
-            [boot.pod :as pod]
-            [boot.util :as util]
+  (:require [boot.core   :as core]
+            [boot.pod    :as pod]
+            [boot.jar    :as jar]
+            [boot.tmpdir :as tmpd]
+            [boot.util   :as util]
             [clojure.java.io :as io]))
 
 (defn- spit-info-json! [info-json-file opts]
@@ -44,3 +46,30 @@
                  (.. info-json-file getParentFile getName)
                  (.getName info-json-file))
       (-> fs (core/add-resource tgt :meta {:mod-name mod-name}) core/commit!))))
+
+(defn- info-json->mod-name [info-json]
+  (->> info-json
+       core/tmp-file
+       .getParentFile
+       .getName))
+
+(core/deftask package-mods
+  "Create mod zip files out of directories that look like mods.
+
+  Searches the fileset for all info.json files, then zips each
+  directory containing one into an archive with the same name with
+  .zip appended."
+  []
+  (let [old-fs (atom nil)
+        tgt (core/tmp-dir!)]
+    (core/with-pre-wrap [fs]
+      (doseq [info-json (->> fs
+                             core/input-files
+                             (core/by-name ["info.json"]))]
+        (let [mod-name (info-json->mod-name info-json)
+              new-fs (tmpd/restrict-dirs fs #{mod-name})
+              mod-package (str mod-name ".zip")
+              mod-package-out (io/file tgt mod-package)]
+          (util/info "Writing %s...\n" mod-package)
+          (jar/update-zip! mod-package-out @old-fs (reset! old-fs new-fs))))
+      (-> fs (core/add-resource tgt) core/commit!))))
