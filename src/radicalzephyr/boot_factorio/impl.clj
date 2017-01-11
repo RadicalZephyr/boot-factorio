@@ -1,7 +1,7 @@
 (ns radicalzephyr.boot-factorio.impl
   (:require [cheshire.core :refer [generate-string]]))
 
-(defn- info-json-options [{:keys [project
+(defn- info-json-options [{:keys [mod-name
                                   version
                                   title
                                   author
@@ -10,15 +10,16 @@
                                   description
                                   factorio-version
                                   dependencies]}]
-  (array-map :name project
-             :version version
-             :title title
-             :author author
-             :contact contact
-             :homepage homepage
-             :description description
-             :factorio_version factorio-version
-             :dependencies dependencies))
+
+  (array-map :name             mod-name
+             :version          version
+             :title            (or title            "")
+             :author           (or author           "")
+             :contact          (or contact          "")
+             :homepage         (or homepage         "")
+             :description      (or description      "")
+             :factorio_version (or factorio-version "")
+             :dependencies     (or dependencies     [])))
 
 (defn spit-info-json! [info-json-file opts]
   (as-> opts $
