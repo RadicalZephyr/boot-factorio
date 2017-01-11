@@ -5,6 +5,7 @@
             [boot.jar    :as jar]
             [boot.tmpdir :as tmpd]
             [boot.util   :as util]
+            [boot.task.built-in :as built-in]
             [clojure.java.io :as io]))
 
 (defn- spit-info-json! [info-json-file opts]
@@ -41,11 +42,13 @@
         mod-dir-file   (io/file tgt mod-dir-name)
         info-json-file (io/file mod-dir-file "info.json")]
     (spit-info-json! info-json-file opts)
-    (core/with-pre-wrap [fs]
-      (util/info "Writing %s/%s...\n"
-                 (.. info-json-file getParentFile getName)
-                 (.getName info-json-file))
-      (-> fs (core/add-resource tgt :meta {:mod-name mod-name}) core/commit!))))
+    (comp
+     (core/with-pre-wrap [fs]
+       (util/info "Writing %s/%s...\n"
+                  (.. info-json-file getParentFile getName)
+                  (.getName info-json-file))
+       (-> fs (core/add-resource tgt :meta {:mod-name mod-name}) core/commit!))
+     (built-in/sift :move {(re-pattern (format "^%s/" mod-name)) mod-dir-name}))))
 
 (defn- info-json->mod-name [info-json]
   (->> info-json
@@ -60,16 +63,16 @@
   directory containing one into an archive with the same name with
   .zip appended."
   []
-  (let [old-fs (atom nil)
+  (let [old-fses (atom {})
         tgt (core/tmp-dir!)]
     (core/with-pre-wrap [fs]
-      (doseq [info-json (->> fs
-                             core/input-files
-                             (core/by-name ["info.json"]))]
+      (doseq [info-json (core/by-name ["info.json"] (core/input-files fs))]
         (let [mod-name (info-json->mod-name info-json)
-              new-fs (tmpd/restrict-dirs fs #{mod-name})
+              new-fs (tmpd/restrict-dirs fs (core/by-name [mod-name] (core/input-dirs fs)))
               mod-package (str mod-name ".zip")
-              mod-package-out (io/file tgt mod-package)]
+              mod-package-out (io/file tgt mod-package)
+              old-fs (get @old-fses mod-name)]
           (util/info "Writing %s...\n" mod-package)
-          (jar/update-zip! mod-package-out @old-fs (reset! old-fs new-fs))))
+          (jar/update-zip! mod-package-out old-fs new-fs)
+          (swap! old-fses assoc mod-name new-fs)))
       (-> fs (core/add-resource tgt) core/commit!))))
