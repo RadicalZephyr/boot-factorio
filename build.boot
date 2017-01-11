@@ -5,7 +5,8 @@
           :source-paths   #{"test"}
           :dependencies   '[[org.clojure/clojure   "1.8.0" :scope "provided"]
                             [boot/core             "2.7.1" :scope "provided"]
-                            [metosin/boot-alt-test "0.2.1" :scope "test"]])
+                            [metosin/boot-alt-test "0.2.1" :scope "test"]
+                            [cheshire              "5.6.3" :scope "test"]])
 
 (task-options!
  pom {:project     project

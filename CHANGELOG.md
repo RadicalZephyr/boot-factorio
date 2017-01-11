@@ -4,3 +4,6 @@ file. This change log follows the conventions
 of [keepachangelog.com](http://keepachangelog.com/).
 
 ## [Unreleased]
+### Added
+
+- `info-json` task. Analogous to the `pom` task for Java/Clojure projects
