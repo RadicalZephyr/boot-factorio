@@ -1,12 +1,13 @@
 (ns radicalzephyr.boot-factorio
   {:boot/export-tasks true}
-  (:require [boot.core   :as core]
-            [boot.pod    :as pod]
-            [boot.jar    :as jar]
-            [boot.tmpdir :as tmpd]
-            [boot.util   :as util]
+  (:require [boot.core          :as core]
+            [boot.pod           :as pod]
+            [boot.jar           :as jar]
+            [boot.task-helpers  :as helpers]
+            [boot.tmpdir        :as tmpd]
+            [boot.util          :as util]
             [boot.task.built-in :as built-in]
-            [clojure.java.io :as io]))
+            [clojure.java.io    :as io]))
 
 (defn- spit-info-json! [info-json-file opts]
   (let [dependencies (-> (core/get-env) :dependencies (conj '[cheshire "5.6.3"]))
@@ -41,15 +42,21 @@
         opts *opts*
         mod-dir-name   (format "%s_%s" mod-name version)
         mod-dir-file   (io/file tgt mod-name)
-        info-json-file (io/file mod-dir-file "info.json")]
+        info-json-file (io/file mod-dir-file "info.json")
+        move-mod-files (helpers/sift-action false
+                                        :move
+                                        {(re-pattern (format "^%s" mod-name))
+                                         mod-dir-name})]
     (spit-info-json! info-json-file opts)
-    (comp
-     (core/with-pre-wrap [fs]
-       (util/info "Writing %s/%s...\n"
-                  (.. info-json-file getParentFile getName)
-                  (.getName info-json-file))
-       (-> fs (core/add-resource tgt :meta {:mod-name mod-name}) core/commit!))
-     (built-in/sift :move {(re-pattern (format "^%s" mod-name)) mod-dir-name}))))
+    (core/with-pre-wrap [fs]
+      (util/info "Writing %s/%s...\n"
+                 (.. info-json-file getParentFile getName)
+                 (.getName info-json-file))
+      (util/info "Moving mod files from %s/ to %s/...\n" mod-name mod-dir-name)
+      (-> fs
+          (core/add-resource tgt :meta {:mod-name mod-name})
+          move-mod-files
+          core/commit!))))
 
 (defn- info-json->mod-name [info-json]
   (->> info-json
