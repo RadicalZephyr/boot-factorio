@@ -69,10 +69,13 @@
     (core/with-pre-wrap [fs]
       (doseq [info-json (core/by-name ["info.json"] (core/input-files fs))]
         (let [mod-name (info-json->mod-name info-json)
-              new-fs (tmpd/restrict-dirs fs (core/by-name [mod-name] (core/input-dirs fs)))
+              not-mod-files (core/not-by-re [(re-pattern mod-name)]
+                                            (core/input-files fs))
+              new-fs (tmpd/rm fs not-mod-files)
               mod-package (str mod-name ".zip")
               mod-package-out (io/file tgt mod-package)
               old-fs (get @old-fses mod-name)]
+
           (util/info "Writing %s...\n" mod-package)
           (jar/update-zip! mod-package-out old-fs new-fs)
           (swap! old-fses assoc mod-name new-fs)))
