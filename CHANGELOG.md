@@ -6,6 +6,5 @@ of [keepachangelog.com](http://keepachangelog.com/).
 ## [Unreleased]
 ### Added
 
-- `info-json` task. Analogous to the `pom` task for Java/Clojure projects
 - `package-mods` task. A specialized version of the `zip` task that
   zips all directories that contain an `info.json` file.
