@@ -14,6 +14,18 @@
        .getParentFile
        .getName))
 
+(defn- zip-mod-files [old-fses tgt fs release-mod-dir-name]
+  (let [not-mod-files (core/not-by-re [(re-pattern (str "^" release-mod-dir-name "/"))]
+                                      (core/input-files fs))
+        old-fs (get @old-fses release-mod-dir-name)
+        new-fs (tmpd/rm fs not-mod-files)
+        mod-package (str release-mod-dir-name ".zip")
+        mod-package-out (io/file tgt mod-package)]
+
+    (util/info "Writing %s...\n" mod-package)
+    (jar/update-zip! mod-package-out old-fs new-fs)
+    (swap! old-fses assoc release-mod-dir-name new-fs)))
+
 (defn- make-packager [old-fses tgt]
   (fn [fs info-json]
     (let [info-json-file (core/tmp-file info-json)
@@ -25,17 +37,9 @@
                                               {mod-dir-name release-mod-dir-name})]
 
       (util/info "Moving mod files from %s/ to %s/...\n" mod-dir-name release-mod-dir-name)
-      (let [fs (-> fs move-mod-files core/commit!)
-            not-mod-files (core/not-by-re [(re-pattern (str "^" release-mod-dir-name "/"))]
-                                          (core/input-files fs))
-            old-fs (get @old-fses mod-name)
-            new-fs (tmpd/rm fs not-mod-files)
-            mod-package (str release-mod-dir-name ".zip")
-            mod-package-out (io/file tgt mod-package)]
+      (let [fs (-> fs move-mod-files core/commit!)]
+        (zip-mod-files old-fses tgt fs release-mod-dir-name)
 
-        (util/info "Writing %s...\n" mod-package)
-        (jar/update-zip! mod-package-out old-fs new-fs)
-        (swap! old-fses assoc mod-name new-fs)
         fs))))
 
 (core/deftask package-mods
