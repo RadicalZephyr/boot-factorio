@@ -36,10 +36,11 @@
 
   (when-not (and mod-name version)
     (throw (Exception. "need mod-name and version to create info.json")))
+
   (let [tgt (core/tmp-dir!)
         opts *opts*
         mod-dir-name   (format "%s_%s" mod-name version)
-        mod-dir-file   (io/file tgt mod-dir-name)
+        mod-dir-file   (io/file tgt mod-name)
         info-json-file (io/file mod-dir-file "info.json")]
     (spit-info-json! info-json-file opts)
     (comp
@@ -48,7 +49,7 @@
                   (.. info-json-file getParentFile getName)
                   (.getName info-json-file))
        (-> fs (core/add-resource tgt :meta {:mod-name mod-name}) core/commit!))
-     (built-in/sift :move {(re-pattern (format "^%s/" mod-name)) mod-dir-name}))))
+     (built-in/sift :move {(re-pattern (format "^%s" mod-name)) mod-dir-name}))))
 
 (defn- info-json->mod-name [info-json]
   (->> info-json
